@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}Table: {{ table_name }} - PyMiniDB{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-actions {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: white;
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        margin: -1rem -1rem 1rem -1rem;
+    }
+    
+    .data-table {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    .column-badge {
+        font-size: 0.8em;
+        margin-right: 0.3em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="bi bi-table"></i> Table: {{ table_name }}
+        <span class="badge bg-secondary">{{ table.row_count }} rows</span>
+    </h1>
+    <div>
+        <a href="{{ url_for('tables') }}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <button class="btn btn-outline-primary" onclick="exportTable()">
+            <i class="bi bi-download"></i> Export CSV
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bi bi-info-circle"></i> Table Schema</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Column</th>
+                            <th>Type</th>
+                            <th>Constraints</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for column in table.columns %}
+                        <tr>
+                            <td>
+                                <strong>{{ column.name }}</strong>
+                                {% if column.is_pk %}
+                                <span class="badge bg-primary column-badge">PK</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <code>{{ column.type }}{% if column.length %}({{ column.length }}){% endif %}</code>
+                            </td>
+                            <td>
+                                {% if column.is_unique %}
+                                <span class="badge bg-info column-badge">UNIQUE</span>
+                                {% endif %}
+                                {% if column.is_not_null %}
+                                <span class="badge bg-warning column-badge">NOT NULL</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                {% if table.primary_key %}
+                <div class="mt-3">
+                    <strong>Primary Key:</strong>
+                    <code>{{ table.primary_key|join(', ') }}</code>
+                </div>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <strong>Indexes:</strong>
+                    <span class="badge bg-secondary">{{ table.indexes }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-lightning"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="runQuery('SELECT * FROM {{ table_name }} LIMIT 10;')">
+                        <i class="bi bi-eye"></i> View First 10 Rows
+                    </button>
+                    <button class="btn btn-outline-success" onclick="runQuery('SELECT COUNT(*) as count FROM {{ table_name }};')">
+                        <i class="bi bi-calculator"></i> Count Rows
+                    </button>
+                    <a href="{{ url_for('query') }}" class="btn btn-outline-info">
+                        <i class="bi bi-terminal"></i> SQL Query for this Table
+                    </a>
+                    <button class="btn btn-outline-danger" onclick="confirmDeleteTable()">
+                        <i class="bi bi-trash"></i> Drop Table
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-list"></i> Table Data</h5>
+                <span class="badge bg-primary">{{ data|length }} rows displayed</span>
+            </div>
+            <div class="card-body p-0">
+                {% if data %}
+                <div class="table-actions">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="searchInput" 
+                                   placeholder="Search in table..." onkeyup="filterTable()">
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="rowsPerPage" onchange="filterTable()">
+                                <option value="10">10 rows</option>
+                                <option value="25" selected>25 rows</option>
+                                <option value="50">50 rows</option>
+                                <option value="100">100 rows</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-secondary w-100" onclick="refreshData()">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="data-table">
+                    <table class="table table-hover mb-0" id="dataTable">
+                        <thead>
+                            <tr>
+                                {% for column in table.columns %}
+                                <th>{{ column.name }}
+                                    {% if column.is_pk %}
+                                    <i class="bi bi-key text-primary"></i>
+                                    {% endif %}
+                                </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in data %}
+                            <tr>
+                                {% for column in table.columns %}
+                                <td>
+                                    {% if row[column.name] is none %}
+                                    <span class="text-muted"><i>NULL</i></span>
+                                    {% else %}
+                                    {{ row[column.name] }}
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-table display-1 text-muted"></i>
+                    <h3 class="mt-3">No Data</h3>
+                    <p class="text-muted">This table is empty or contains no rows.</p>
+                    <button class="btn btn-primary" onclick="runQuery('INSERT INTO {{ table_name }} DEFAULT VALUES;')">
+                        <i class="bi bi-plus-circle"></i> Insert Sample Row
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+            {% if data %}
+            <div class="card-footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        Showing {{ data|length }} of {{ table.row_count }} rows
+                    </small>
+                    <div class="pagination">
+                        <button class="btn btn-sm btn-outline-secondary" disabled>
+                            <i class="bi bi-chevron-left"></i> Previous
+                        </button>
+                        <span class="mx-2">Page 1 of 1</span>
+                        <button class="btn btn-sm btn-outline-secondary" disabled>
+                            Next <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportTable() {
+    fetch(`/api/table/{{ table_name }}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data && data.data.length > 0) {
+                const headers = Object.keys(data.data[0]);
+                const csvRows = [
+                    headers.join(','),
+                    ...data.data.map(row => 
+                        headers.map(header => {
+                            const value = row[header];
+                            const escaped = ('' + value).replace(/"/g, '""');
+                            return /[,"\n]/.test(escaped) ? `"${escaped}"` : escaped;
+                        }).join(',')
+                    )
+                ];
+                
+                const csvString = csvRows.join('\n');
+                const blob = new Blob([csvString], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = '{{ table_name }}_export.csv';
+                a.click();
+                window.URL.revokeObjectURL(url);
+                
+                showNotification('Table exported successfully!', 'success');
+            } else {
+                showNotification('No data to export', 'warning');
+            }
+        });
+}
+
+function runQuery(sql) {
+    window.location.href = `/query#${encodeURIComponent(sql)}`;
+}
+
+function refreshData() {
+    window.location.reload();
+}
+
+function filterTable() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const rows = document.querySelectorAll('#dataTable tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(search) ? '' : 'none';
+    });
+}
+
+function confirmDeleteTable() {
+    if (confirm(`Are you sure you want to DROP table "{{ table_name }}"?\n\nThis will delete ALL data and cannot be undone!`)) {
+        fetch('/api/query', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                sql: `DROP TABLE {{ table_name }}` 
+            })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showNotification(`Table "{{ table_name }}" dropped successfully!`, 'success');
+                setTimeout(() => {
+                    window.location.href = '/tables';
+                }, 1000);
+            } else {
+                showNotification(`Error: ${result.error || result.message}`, 'danger');
+            }
+        });
+    }
+}
+
+function showNotification(message, type) {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alert.style.top = '20px';
+    alert.style.right = '20px';
+    alert.style.zIndex = '9999';
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alert);
+    
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 3000);
+}
+
+// Initialize search
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.focus();
+    }
+});
+</script>
+{% endblock %}

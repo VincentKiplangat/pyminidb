@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Home - PyMiniDB{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="bi bi-info-circle"></i> Welcome to PyMiniDB</h4>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    PyMiniDB is a minimal relational database management system built from scratch in Python.
+                    This web interface allows you to interact with the database through a user-friendly interface.
+                </p>
+                <h5>Features:</h5>
+                <ul>
+                    <li>Create and manage database tables</li>
+                    <li>Execute SQL queries</li>
+                    <li>View and edit table data</li>
+                    <li>Task management example (full CRUD operations)</li>
+                    <li>Basic indexing support</li>
+                </ul>
+                <div class="mt-4">
+                    <a href="{{ url_for('query') }}" class="btn btn-primary me-2">
+                        <i class="bi bi-terminal"></i> Try SQL Query
+                    </a>
+                    <a href="{{ url_for('create_table') }}" class="btn btn-success me-2">
+                        <i class="bi bi-plus-circle"></i> Create Table
+                    </a>
+                    <a href="{{ url_for('tasks') }}" class="btn btn-warning">
+                        <i class="bi bi-check-square"></i> Task Manager
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-speedometer2"></i> Quick Stats</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h2 class="text-primary">{{ tables|length }}</h2>
+                                <small class="text-muted">Tables</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h2 class="text-success">{{ tables|length * 3 }}</h2>
+                                <small class="text-muted">Total Columns</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <h6>Recent Tables:</h6>
+                <ul class="list-group">
+                    {% for table in tables[:5] %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a href="{{ url_for('table_view', table_name=table) }}" class="text-decoration-none">
+                            <i class="bi bi-table"></i> {{ table }}
+                        </a>
+                        <span class="badge bg-primary rounded-pill">
+                            <i class="bi bi-list-ol"></i> {{ loop.index }}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-lightning"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="bi bi-table fs-1 text-primary"></i>
+                                <h5 class="card-title">Browse Tables</h5>
+                                <p class="card-text">View all tables and their data</p>
+                                <a href="{{ url_for('tables') }}" class="btn btn-outline-primary">Browse</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="bi bi-terminal fs-1 text-success"></i>
+                                <h5 class="card-title">SQL Query</h5>
+                                <p class="card-text">Execute custom SQL queries</p>
+                                <a href="{{ url_for('query') }}" class="btn btn-outline-success">Query</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="bi bi-plus-circle fs-1 text-warning"></i>
+                                <h5 class="card-title">Create Table</h5>
+                                <p class="card-text">Create new database tables</p>
+                                <a href="{{ url_for('create_table') }}" class="btn btn-outline-warning">Create</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="bi bi-check-square fs-1 text-info"></i>
+                                <h5 class="card-title">Task Demo</h5>
+                                <p class="card-text">CRUD operations example</p>
+                                <a href="{{ url_for('tasks') }}" class="btn btn-outline-info">Demo</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

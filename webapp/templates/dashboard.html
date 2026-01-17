@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - PyMiniDB{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .progress {
+        height: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-speedometer2"></i> Database Dashboard</h1>
+
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card text-white bg-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">TABLES</h6>
+                        <h2 class="mb-0">{{ total_tables }}</h2>
+                    </div>
+                    <i class="bi bi-table fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card text-white bg-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">TOTAL COLUMNS</h6>
+                        <h2 class="mb-0">{{ table_stats|sum(attribute='columns') }}</h2>
+                    </div>
+                    <i class="bi bi-layout-three-columns fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card text-white bg-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">TOTAL ROWS</h6>
+                        <h2 class="mb-0">{{ table_stats|sum(attribute='rows') }}</h2>
+                    </div>
+                    <i class="bi bi-list-ol fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card text-white bg-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">DATABASE SIZE</h6>
+                        <h2 class="mb-0">{{ (table_stats|sum(attribute='rows') * 100)|filesizeformat }}</h2>
+                    </div>
+                    <i class="bi bi-hdd fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-table"></i> Table Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Table Name</th>
+                                <th>Columns</th>
+                                <th>Rows</th>
+                                <th>Size</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in table_stats %}
+                            <tr>
+                                <td>
+                                    <i class="bi bi-table"></i>
+                                    <strong>{{ stat.name }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ stat.columns }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-2">{{ stat.rows }}</span>
+                                        <div class="progress flex-grow-1" style="height: 10px;">
+                                            {% set width = (stat.rows / (table_stats|max(attribute='rows')|default(1, true))) * 100 %}
+                                            <div class="progress-bar bg-success" style="width: {{ width }}%"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="text-muted">{{ (stat.rows * 100)|filesizeformat }}</span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('table_view', table_name=stat.name) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-clock-history"></i> Recent Queries</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for query in recent_queries %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <small class="text-muted">{{ loop.index }}.</small>
+                            <small class="text-success">{{ query.time }}</small>
+                        </div>
+                        <code class="mt-2 d-block small">{{ query.sql[:50] }}{% if query.sql|length > 50 %}...{% endif %}</code>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="mt-3 text-center">
+                    <a href="{{ url_for('query') }}" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-terminal"></i> Execute New Query
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="bi bi-lightning"></i> Quick Links</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('query') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-terminal"></i> SQL Query Editor
+                    </a>
+                    <a href="{{ url_for('create_table') }}" class="btn btn-outline-success">
+                        <i class="bi bi-plus-circle"></i> Create New Table
+                    </a>
+                    <a href="{{ url_for('tasks') }}" class="btn btn-outline-warning">
+                        <i class="bi bi-check-square"></i> Task Manager Demo
+                    </a>
+                    <button class="btn btn-outline-info" onclick="refreshDashboard()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh Dashboard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshDashboard() {
+    window.location.reload();
+}
+
+// Auto-refresh every 30 seconds
+setTimeout(refreshDashboard, 30000);
+</script>
+{% endblock %}

@@ -1,0 +1,523 @@
+{% extends "base.html" %}
+
+{% block title %}Task Manager - PyMiniDB{% endblock %}
+
+{% block extra_css %}
+<style>
+    .task-card {
+        transition: all 0.3s;
+        border-left: 4px solid #6c757d;
+    }
+    .task-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .task-card.high { border-left-color: #dc3545; }
+    .task-card.medium { border-left-color: #ffc107; }
+    .task-card.low { border-left-color: #28a745; }
+    
+    .status-badge {
+        font-size: 0.75em;
+        padding: 0.25em 0.6em;
+    }
+    
+    .priority-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    .priority-high { background-color: #dc3545; }
+    .priority-medium { background-color: #ffc107; }
+    .priority-low { background-color: #28a745; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-check-square"></i> Task Manager</h1>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+        <i class="bi bi-plus-circle"></i> New Task
+    </button>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">TOTAL TASKS</h6>
+                        <h2 class="mb-0">{{ tasks|length }}</h2>
+                    </div>
+                    <i class="bi bi-list-task fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">COMPLETED</h6>
+                        <h2 class="mb-0">{{ status_counts.get('completed', 0) }}</h2>
+                    </div>
+                    <i class="bi bi-check-circle fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">IN PROGRESS</h6>
+                        <h2 class="mb-0">{{ status_counts.get('in_progress', 0) }}</h2>
+                    </div>
+                    <i class="bi bi-arrow-clockwise fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">PENDING</h6>
+                        <h2 class="mb-0">{{ status_counts.get('pending', 0) }}</h2>
+                    </div>
+                    <i class="bi bi-clock fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-filter"></i> Filters</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="statusFilter">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Priority</label>
+                        <select class="form-select" id="priorityFilter">
+                            <option value="">All Priorities</option>
+                            <option value="1">High (1)</option>
+                            <option value="2">Medium (2)</option>
+                            <option value="3">Low (3)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button class="btn btn-outline-primary me-2" onclick="applyFilters()">
+                            <i class="bi bi-funnel"></i> Apply Filters
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                            <i class="bi bi-x-circle"></i> Clear Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="tasksContainer">
+    {% if tasks %}
+        {% for task in tasks %}
+        <div class="col-md-6 col-lg-4 mb-4 task-item" 
+             data-status="{{ task.status }}" 
+             data-priority="{{ task.priority }}">
+            <div class="card task-card h-100 {% if task.priority == 1 %}high{% elif task.priority == 2 %}medium{% else %}low{% endif %}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title mb-0">{{ task.title }}</h5>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                    data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="#" 
+                                       onclick="editTask({{ task.id }})">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" 
+                                       onclick="deleteTask({{ task.id }}, '{{ task.title }}')">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <p class="card-text text-muted small">{{ task.description or 'No description' }}</p>
+                    
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>
+                                <span class="priority-indicator 
+                                    {% if task.priority == 1 %}priority-high
+                                    {% elif task.priority == 2 %}priority-medium
+                                    {% else %}priority-low{% endif %}"></span>
+                                Priority: 
+                                {% if task.priority == 1 %}High
+                                {% elif task.priority == 2 %}Medium
+                                {% else %}Low{% endif %}
+                            </span>
+                            
+                            <span class="badge 
+                                {% if task.status == 'completed' %}bg-success
+                                {% elif task.status == 'in_progress' %}bg-warning
+                                {% else %}bg-secondary{% endif %} status-badge">
+                                {{ task.status|replace('_', ' ')|title }}
+                            </span>
+                        </div>
+                        
+                        {% if task.due_date %}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar"></i> Due: {{ task.due_date }}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-top-0">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">
+                            <i class="bi bi-clock"></i> Created: {{ task.created_at[:10] }}
+                        </small>
+                        <button class="btn btn-sm 
+                            {% if task.status == 'completed' %}btn-outline-secondary
+                            {% else %}btn-outline-success{% endif %}"
+                            onclick="toggleTaskStatus({{ task.id }}, '{{ task.status }}')">
+                            {% if task.status == 'completed' %}
+                            <i class="bi bi-x-circle"></i> Mark Incomplete
+                            {% else %}
+                            <i class="bi bi-check-circle"></i> Mark Complete
+                            {% endif %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-check-square display-1 text-muted"></i>
+                <h3 class="mt-3">No tasks found</h3>
+                <p class="text-muted">Create your first task to get started!</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+                    <i class="bi bi-plus-circle"></i> Create First Task
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Create Task Modal -->
+<div class="modal fade" id="createTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Create New Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createTaskForm">
+                    <div class="mb-3">
+                        <label class="form-label">Title *</label>
+                        <input type="text" class="form-control" name="title" required 
+                               placeholder="Enter task title">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3" 
+                                  placeholder="Enter task description"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status">
+                                <option value="pending">Pending</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Priority</label>
+                            <select class="form-select" name="priority">
+                                <option value="1">High</option>
+                                <option value="2" selected>Medium</option>
+                                <option value="3">Low</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Due Date</label>
+                        <input type="date" class="form-control" name="due_date">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createTask()">
+                    <i class="bi bi-save"></i> Create Task
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Task Modal -->
+<div class="modal fade" id="editTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil"></i> Edit Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editTaskForm">
+                    <input type="hidden" name="id" id="editTaskId">
+                    <div class="mb-3">
+                        <label class="form-label">Title *</label>
+                        <input type="text" class="form-control" name="title" id="editTaskTitle" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" id="editTaskDescription" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status" id="editTaskStatus">
+                                <option value="pending">Pending</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Priority</label>
+                            <select class="form-select" name="priority" id="editTaskPriority">
+                                <option value="1">High</option>
+                                <option value="2">Medium</option>
+                                <option value="3">Low</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Due Date</label>
+                        <input type="date" class="form-control" name="due_date" id="editTaskDueDate">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="updateTask()">
+                    <i class="bi bi-save"></i> Update Task
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function applyFilters() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const priorityFilter = document.getElementById('priorityFilter').value;
+    
+    document.querySelectorAll('.task-item').forEach(item => {
+        let show = true;
+        
+        if (statusFilter && item.dataset.status !== statusFilter) {
+            show = false;
+        }
+        
+        if (priorityFilter && item.dataset.priority !== priorityFilter) {
+            show = false;
+        }
+        
+        item.style.display = show ? 'block' : 'none';
+    });
+}
+
+function clearFilters() {
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('priorityFilter').value = '';
+    document.querySelectorAll('.task-item').forEach(item => {
+        item.style.display = 'block';
+    });
+}
+
+function createTask() {
+    const form = document.getElementById('createTaskForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
+    
+    fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('Task created successfully!', 'success');
+            $('#createTaskModal').modal('hide');
+            form.reset();
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert('Error: ' + result.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('Error creating task: ' + error, 'danger');
+    });
+}
+
+function editTask(taskId) {
+    fetch(`/api/tasks/${taskId}`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const task = result.task;
+                document.getElementById('editTaskId').value = task.id;
+                document.getElementById('editTaskTitle').value = task.title || '';
+                document.getElementById('editTaskDescription').value = task.description || '';
+                document.getElementById('editTaskStatus').value = task.status || 'pending';
+                document.getElementById('editTaskPriority').value = task.priority || 2;
+                document.getElementById('editTaskDueDate').value = task.due_date || '';
+                
+                $('#editTaskModal').modal('show');
+            } else {
+                showAlert('Error loading task: ' + result.error, 'danger');
+            }
+        });
+}
+
+function updateTask() {
+    const form = document.getElementById('editTaskForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
+    
+    fetch(`/api/tasks/${data.id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert('Task updated successfully!', 'success');
+            $('#editTaskModal').modal('hide');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert('Error: ' + result.message, 'danger');
+        }
+    });
+}
+
+function deleteTask(taskId, taskTitle) {
+    if (confirm(`Are you sure you want to delete task: "${taskTitle}"?`)) {
+        fetch(`/api/tasks/${taskId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showAlert('Task deleted successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showAlert('Error: ' + result.message, 'danger');
+            }
+        });
+    }
+}
+
+function toggleTaskStatus(taskId, currentStatus) {
+    const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+    
+    fetch(`/api/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showAlert(`Task marked as ${newStatus}!`, 'success');
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showAlert('Error: ' + result.message, 'danger');
+        }
+    });
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.zIndex = '9999';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 3000);
+}
+
+// Initialize filters from URL params
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('status');
+    const priority = urlParams.get('priority');
+    
+    if (status) {
+        document.getElementById('statusFilter').value = status;
+    }
+    if (priority) {
+        document.getElementById('priorityFilter').value = priority;
+    }
+    
+    if (status || priority) {
+        setTimeout(applyFilters, 100);
+    }
+});
+</script>
+{% endblock %}

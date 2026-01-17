@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}SQL Query - PyMiniDB{% endblock %}
+
+{% block extra_css %}
+<style>
+    .sql-editor {
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 10px;
+        min-height: 150px;
+        resize: vertical;
+    }
+    
+    .sql-keyword {
+        color: #d73a49;
+        font-weight: bold;
+    }
+    
+    .sql-string {
+        color: #032f62;
+    }
+    
+    .sql-number {
+        color: #005cc5;
+    }
+    
+    .sql-comment {
+        color: #6a737d;
+    }
+    
+    .query-history {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .results-table {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="bi bi-terminal"></i> SQL Query Editor</h4>
+            </div>
+            <div class="card-body">
+                <form id="queryForm">
+                    <div class="mb-3">
+                        <label for="sqlEditor" class="form-label">SQL Query</label>
+                        <textarea class="form-control sql-editor" id="sqlEditor" 
+                                  placeholder="SELECT * FROM users;&#10;CREATE TABLE test (id INTEGER PRIMARY KEY, name VARCHAR(100));&#10;INSERT INTO tasks (title) VALUES ('New Task');"></textarea>
+                        <div class="form-text">
+                            Enter SQL statements. Multiple statements should be separated by semicolons.
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2 mb-4">
+                        <button type="button" class="btn btn-primary" onclick="executeQuery()">
+                            <i class="bi bi-play-circle"></i> Execute Query
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearEditor()">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-outline-info dropdown-toggle" 
+                                    data-bs-toggle="dropdown">
+                                <i class="bi bi-lightning"></i> Quick Queries
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="insertQuery('SELECT * FROM tasks;')">Select all tasks</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="insertQuery('SELECT * FROM users;')">Select all users</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="insertQuery('CREATE TABLE products (id INTEGER PRIMARY KEY, name VARCHAR(100) NOT NULL, price FLOAT, stock INTEGER);')">Create products table</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="insertQuery('INSERT INTO tasks (title, status) VALUES (\\'New Task\\', \\'pending\\');')">Insert new task</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="insertQuery('UPDATE tasks SET status = \\'completed\\' WHERE id = 1;')">Update task status</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="insertQuery('DELETE FROM tasks WHERE id = 1;')">Delete task</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </form>
+                
+                <div id="queryResults" class="mt-4" style="display: none;">
+                    <h5><i class="bi bi-table"></i> Results</h5>
+                    <div class="alert" id="resultAlert"></div>
+                    <div id="resultsTable" class="results-table"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bi bi-info-circle"></i> SQL Reference</h5>
+            </div>
+            <div class="card-body">
+                <h6>Basic Commands:</h6>
+                <ul class="list-unstyled">
+                    <li><code>SELECT</code> - Query data</li>
+                    <li><code>INSERT</code> - Add new data</li>
+                    <li><code>UPDATE</code> - Modify data</li>
+                    <li><code>DELETE</code> - Remove data</li>
+                    <li><code>CREATE TABLE</code> - Create table</li>
+                    <li><code>DROP TABLE</code> - Delete table</li>
+                </ul>
+                
+                <h6 class="mt-3">Examples:</h6>
+                <div class="small">
+                    <code>SELECT * FROM table;</code><br>
+                    <code>INSERT INTO table (col1, col2) VALUES (val1, val2);</code><br>
+                    <code>UPDATE table SET col1 = value WHERE condition;</code><br>
+                    <code>DELETE FROM table WHERE condition;</code>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-clock-history"></i> Recent Tables</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group query-history">
+                    {% for table in db.get_tables() %}
+                    <a href="#" class="list-group-item list-group-item-action" 
+                       onclick="insertQuery('SELECT * FROM {{ table }} LIMIT 10;')">
+                        <i class="bi bi-table me-2"></i>
+                        {{ table }}
+                        <span class="badge bg-primary float-end">SELECT</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                <div class="mt-3">
+                    <a href="{{ url_for('tables') }}" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="bi bi-table"></i> View All Tables
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let queryHistory = JSON.parse(localStorage.getItem('pyminidb_query_history') || '[]');
+
+function executeQuery() {
+    const sql = document.getElementById('sqlEditor').value.trim();
+    if (!sql) {
+        showResult('Please enter a SQL query', 'warning');
+        return;
+    }
+    
+    const button = event?.target || document.querySelector('#queryForm button');
+    const original = button.innerHTML;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Executing...';
+    button.disabled = true;
+    
+    // Save to history
+    if (!queryHistory.includes(sql)) {
+        queryHistory.unshift(sql);
+        if (queryHistory.length > 10) queryHistory.pop();
+        localStorage.setItem('pyminidb_query_history', JSON.stringify(queryHistory));
+    }
+    
+    fetch('/api/query', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sql: sql })
+    })
+    .then(response => response.json())
+    .then(data => {
+        button.innerHTML = original;
+        button.disabled = false;
+        displayResults(data);
+    })
+    .catch(error => {
+        button.innerHTML = original;
+        button.disabled = false;
+        showResult('Error: ' + error, 'danger');
+    });
+}
+
+function displayResults(data) {
+    const resultsDiv = document.getElementById('queryResults');
+    const alertDiv = document.getElementById('resultAlert');
+    const tableDiv = document.getElementById('resultsTable');
+    
+    resultsDiv.style.display = 'block';
+    
+    if (data.success) {
+        alertDiv.className = 'alert alert-success';
+        alertDiv.innerHTML = `
+            <strong><i class="bi bi-check-circle"></i> Success!</strong> ${data.message}
+            <br><small>Execution time: ${data.execution_time.toFixed(3)}s | Rows affected: ${data.rows_affected}</small>
+        `;
+        
+        if (data.data && data.data.length > 0) {
+            // Create table
+            let html = '<table class="table table-striped table-hover"><thead><tr>';
+            
+            // Header row
+            Object.keys(data.data[0]).forEach(column => {
+                html += `<th>${column}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            // Data rows
+            data.data.forEach(row => {
+                html += '<tr>';
+                Object.values(row).forEach(value => {
+                    if (value === null || value === undefined) {
+                        html += '<td class="text-muted"><i>NULL</i></td>';
+                    } else if (typeof value === 'object') {
+                        html += `<td>${JSON.stringify(value)}</td>`;
+                    } else {
+                        html += `<td>${value}</td>`;
+                    }
+                });
+                html += '</tr>';
+            });
+            
+            html += `</tbody></table>
+                <div class="text-muted small">
+                    ${data.data.length} row${data.data.length !== 1 ? 's' : ''} returned
+                </div>`;
+            
+            tableDiv.innerHTML = html;
+        } else {
+            tableDiv.innerHTML = '<div class="alert alert-info">No data returned</div>';
+        }
+    } else {
+        alertDiv.className = 'alert alert-danger';
+        alertDiv.innerHTML = `
+            <strong><i class="bi bi-exclamation-triangle"></i> Error!</strong> ${data.error || data.message}
+        `;
+        tableDiv.innerHTML = '';
+    }
+    
+    // Scroll to results
+    resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showResult(message, type) {
+    const resultsDiv = document.getElementById('queryResults');
+    const alertDiv = document.getElementById('resultAlert');
+    const tableDiv = document.getElementById('resultsTable');
+    
+    resultsDiv.style.display = 'block';
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.innerHTML = message;
+    tableDiv.innerHTML = '';
+    
+    resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function clearEditor() {
+    document.getElementById('sqlEditor').value = '';
+    document.getElementById('sqlEditor').focus();
+}
+
+function insertQuery(sql) {
+    document.getElementById('sqlEditor').value = sql;
+    document.getElementById('sqlEditor').focus();
+}
+
+// Tab key support
+document.getElementById('sqlEditor').addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+        
+        // Insert 4 spaces
+        this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+        
+        // Move cursor
+        this.selectionStart = this.selectionEnd = start + 4;
+    }
+    
+    // Ctrl+Enter to execute
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        executeQuery();
+    }
+});
+
+// Load history
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-resize textarea
+    const textarea = document.getElementById('sqlEditor');
+    textarea.style.height = 'auto';
+    textarea.style.height = (textarea.scrollHeight) + 'px';
+    
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+});
+</script>
+{% endblock %}

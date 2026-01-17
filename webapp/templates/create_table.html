@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Create Table - PyMiniDB{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="bi bi-plus-circle"></i> Create New Table</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('create_table') }}">
+                    <div class="mb-3">
+                        <label for="table_name" class="form-label">Table Name *</label>
+                        <input type="text" class="form-control" id="table_name" name="table_name" 
+                               placeholder="e.g., customers, orders, products" required>
+                        <div class="form-text">Use lowercase with underscores (snake_case)</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="columns" class="form-label">Column Definitions *</label>
+                        <textarea class="form-control" id="columns" name="columns" rows="8" 
+                                  placeholder="id INTEGER PRIMARY KEY&#10;name VARCHAR(100) NOT NULL&#10;email VARCHAR(100) UNIQUE&#10;age INTEGER&#10;created_at TIMESTAMP" required></textarea>
+                        <div class="form-text">
+                            One column per line. Format: <code>column_name data_type [constraints]</code><br>
+                            <strong>Data Types:</strong> INTEGER, VARCHAR(size), TEXT, FLOAT, DOUBLE, BOOLEAN, DATE, TIMESTAMP<br>
+                            <strong>Constraints:</strong> PRIMARY KEY, UNIQUE, NOT NULL<br>
+                            <strong>Example:</strong> <code>id INTEGER PRIMARY KEY</code>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('tables') }}" class="btn btn-secondary me-md-2">
+                            <i class="bi bi-arrow-left"></i> Back to Tables
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Create Table
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="bi bi-info-circle"></i> Quick Reference</h5>
+            </div>
+            <div class="card-body">
+                <h6>Common Column Definitions:</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Purpose</th>
+                                    <th>Definition</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Primary Key</td>
+                                    <td><code>id INTEGER PRIMARY KEY</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Name Field</td>
+                                    <td><code>name VARCHAR(100) NOT NULL</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Email Field</td>
+                                    <td><code>email VARCHAR(100) UNIQUE</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Age Field</td>
+                                    <td><code>age INTEGER</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Timestamp</td>
+                                    <td><code>created_at TIMESTAMP</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Sample Table:</h6>
+                        <pre class="bg-light p-3 rounded">
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE,
+    full_name VARCHAR(100),
+    age INTEGER,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP
+)</pre>
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="insertSample()">
+                            <i class="bi bi-clipboard"></i> Insert Sample
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function insertSample() {
+    const sample = `id INTEGER PRIMARY KEY
+username VARCHAR(50) UNIQUE NOT NULL
+email VARCHAR(100) UNIQUE
+full_name VARCHAR(100)
+age INTEGER
+is_active BOOLEAN DEFAULT true
+created_at TIMESTAMP`;
+    
+    document.getElementById('table_name').value = 'users';
+    document.getElementById('columns').value = sample;
+    
+    // Show success message
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show mt-3';
+    alert.innerHTML = `
+        Sample table definition inserted!
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.querySelector('.card-body').prepend(alert);
+}
+</script>
+{% endblock %}
