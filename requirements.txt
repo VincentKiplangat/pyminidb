@@ -1,0 +1,15 @@
+# Core dependencies
+wheel
+setuptools
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Web app (for later)
+flask>=2.3.0
+flask-sqlalchemy>=3.0.0  # Only for comparison, not for our DB
+
+# Optional: for better REPL
+prompt-toolkit>=3.0.0
+rich>=13.0.0
