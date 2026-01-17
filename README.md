@@ -1,4 +1,4 @@
-# PyMiniDB: A Custom Relational Database Management System
+# A Relational Database Management System (RDBMS)
 
 Built for the **Pesapal Junior Dev Challenge '26**, **PyMiniDB** is a lightweight, from-scratch Relational Database Management System (RDBMS). Moving beyond simple file storage, this project implements a custom storage engine, a recursive descent SQL parser, and a page-oriented data persistence layer designed for performance and reliability.
 
