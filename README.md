@@ -3,9 +3,13 @@
 Built for the **Pesapal Junior Dev Challenge '26**, **PyMiniDB** is a lightweight, from-scratch Relational Database Management System (RDBMS). Moving beyond simple file storage, this project implements a custom storage engine, a recursive descent SQL parser, and a page-oriented data persistence layer designed for performance and reliability.
 
 ## 🌐 Live Demo
+
+**link**: "https://tinyurl.com/PesapalChallenge"
+
 <a href="https://tinyurl.com/PesapalChallenge" target="_blank">
   <img src="https://img.shields.io/badge/Live%20Demo-Visit%20App-blue?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Live Demo">
-</a>
+</a
+
 
 ## 🚀 Project Overview
 PyMiniDB was developed to demonstrate a deep understanding of database internals. While many modern applications rely on high-level abstractions, this project dives into the low-level complexities of data persistence, binary serialization, and query optimization. It features a custom binary storage format and a SQL-like interface that powers a real-world Task Management web application.
