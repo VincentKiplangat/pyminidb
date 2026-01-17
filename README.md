@@ -45,3 +45,7 @@ PyMiniDB/
 ├── web_app/             # Flask-based CRUD Demo Application
 ├── tests/               # Unit and Integration test suites
 └── main.py              # Interactive REPL Entry point
+
+
+## 🌐 Link to test the functionality
+* **Link**: https://tinyurl.com/PesapalChallenge
