@@ -7,8 +7,13 @@ import os
 import sys
 from pathlib import Path
 
-# Add the parent directory to path to import our modules
-sys.path.append(str(Path(__file__).parent.parent))
+# Create an absolute path to the project root
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# If app.py is inside a 'web_app' folder, move up one level to find 'src'
+PROJECT_ROOT = os.path.dirname(BASE_DIR) 
+
+if PROJECT_ROOT not in sys.path:
+    sys.path.append(PROJECT_ROOT)
 
 from src.catalog.catalog import Catalog
 from src.storage.storage_manager import StorageManager
@@ -19,8 +24,8 @@ from src.catalog.schema import ColumnSchema, DataType, ColumnConstraint
 app = Flask(__name__)
 app.secret_key = 'pyminidb-secret-key-2024'
 
-# Database setup
-DB_PATH = 'webapp_database.db'
+# Ensure the database file is saved in the project root with an absolute path
+DB_PATH = os.path.join(PROJECT_ROOT, 'webapp_database.db')
 
 class WebDatabase:
     """Wrapper for our database for web operations."""
@@ -547,17 +552,20 @@ def internal_error(e):
     return render_template('500.html', db=db), 500
 
 if __name__ == '__main__':
-    # Create necessary directories
-    os.makedirs('webapp/templates', exist_ok=True)
-    os.makedirs('webapp/static/css', exist_ok=True)
-    os.makedirs('webapp/static/js', exist_ok=True)
+    # Create necessary directories (using absolute paths)
+    os.makedirs(os.path.join(BASE_DIR, 'templates'), exist_ok=True)
+    os.makedirs(os.path.join(BASE_DIR, 'static/css'), exist_ok=True)
+    os.makedirs(os.path.join(BASE_DIR, 'static/js'), exist_ok=True)
+    
+    # Get port from environment for deployment, default to 5000 for local
+    port = int(os.environ.get('PORT', 5000))
     
     print("\n" + "="*60)
     print("PyMiniDB Web Application")
     print("="*60)
-    print(f"Database: {DB_PATH}")
-    print("Starting server on http://127.0.0.1:5000")
-    print("Press Ctrl+C to stop")
+    print(f"Database Path: {DB_PATH}")
+    print(f"Starting server on http://0.0.0.0:{port}")
     print("="*60 + "\n")
     
-    app.run(debug=True, port=5000)
+    # Use 0.0.0.0 to allow external access when deployed
+    app.run(host='0.0.0.0', port=port, debug=False)
