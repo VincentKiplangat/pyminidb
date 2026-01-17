@@ -47,5 +47,7 @@ PyMiniDB/
 └── main.py              # Interactive REPL Entry point
 
 
-## 🌐 Link to test the functionality
-* **Link**: https://tinyurl.com/PesapalChallenge
+## 🌐 Live Demo
+<a href="https://tinyurl.com/PesapalChallenge" target="_blank">
+  <img src="https://img.shields.io/badge/Live%20Demo-Visit%20App-blue?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Live Demo">
+</a>
